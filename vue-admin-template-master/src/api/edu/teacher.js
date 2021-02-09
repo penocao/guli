@@ -43,5 +43,11 @@ export default {
       method: "post",
       data: teacher
     });
+  },
+  getTeacherList() {
+    return request({
+      url: `/eduservice/teacher/findAll`,
+      method: "get"
+    });
   }
 };
