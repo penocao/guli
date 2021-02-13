@@ -53,7 +53,43 @@
         />
       </el-form-item>
 
+      <!-- 所属分类 TODO -->
+      <el-form-item label="课程分类">
+        <el-select
+          v-model="courseInfo.subjectParentId"
+          placeholder="一级分类"
+          @change="subjectLevelOneChanged"
+        >
+          <el-option
+            v-for="subject in subjectOneList"
+            :key="subject.id"
+            :label="subject.title"
+            :value="subject.id"
+          />
+        </el-select>
+        <el-select v-model="courseInfo.subjectId" placeholder="二级分类">
+          <el-option
+            v-for="subject in subjectTwoList"
+            :key="subject.id"
+            :label="subject.title"
+            :value="subject.id"
+          />
+        </el-select>
+      </el-form-item>
+
       <!-- 课程封面 TODO -->
+      <!-- 课程封面-->
+      <el-form-item label="课程封面">
+        <el-upload
+          :show-file-list="false"
+          :on-success="handleAvatarSuccess"
+          :before-upload="beforeAvatarUpload"
+          :action="BASE_API + '/eduoss/fileoss'"
+          class="avatar-uploader"
+        >
+          <img :src="courseInfo.cover" />
+        </el-upload>
+      </el-form-item>
 
       <el-form-item label="课程价格">
         <el-input-number
@@ -79,6 +115,7 @@
 <script>
 import course from '@/api/edu/course'
 import teacher from '@/api/edu/teacher'
+import subject from '@/api/edu/subject'
 export default {
 
   data () {
@@ -88,19 +125,49 @@ export default {
         title: '',
         subjectId: '',
         teacherId: '',
+        subjectParentId: '',
         lessonNum: 0,
         description: '',
-        cover: '',
+        cover: '/static/01.jpg',
         price: 0
       },
-      teacherList: []
+      BASE_API: process.env.BASE_API,//获取dev.env.js里面地址
+      teacherList: [],
+      subjectOneList: [],
+      subjectTwoList: []
     }
   },
   created () {
-    console.log("aaa")
-    this.getList()
+    //初始化所有讲师
+    this.getTeacherList()
+    //初始化课程一级分类
+    this.getSubjectList()
   },
   methods: {
+    //上传封面成功调用的方法
+    handleAvatarSuccess () {
+      this.courseInfo.cover = res.data.url
+    },
+    //上传之前调用的方法
+    beforeAvatarUpload () {
+      const isJPG = file.type === 'image/jpeg'
+      const isLt2M = file.size / 1024 / 1024 < 2
+
+      if (!isJPG) {
+        this.$message.error('上传头像图片只能是 JPG 格式!')
+      }
+      if (!isLt2M) {
+        this.$message.error('上传头像图片大小不能超过 2MB!')
+      }
+      return isJPG && isLt2M
+    },
+    //查询所有的一级分类
+    getSubjectList () {
+      subject.getSubjectList()
+        .then(response => {
+          this.subjectOneList = response.data.list
+        })
+    },
     saveOrUpdate () {
       course.addCourseInfo(this.courseInfo).then(
         response => {
@@ -115,12 +182,23 @@ export default {
       )
 
     },
-    getList () {
+    getTeacherList () {
       teacher.getTeacherList()
         .then(response => {
           this.teacherList = response.data.items
         })
     },
+    //点击某个一级分类，触发change,显示对应二级分类
+    subjectLevelOneChanged (value) {
+      //value就是一级分类id值
+      this.subjectOneList.forEach(element => {
+        if (element.id === value) {
+          this.subjectTwoList = element.children
+          this.courseInfo.subjectId = ''
+        }
+      });
+
+    }
   }
 }
 
